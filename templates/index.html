@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Track a Product{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Track a New Product</h1>
+    <p style="color:#666;">Amazon ya Flipkart ka product URL paste karo aur check-frequency choose karo.</p>
+
+    <form method="POST" action="{{ url_for('track') }}">
+        <div style="margin-bottom: 15px;">
+            <label style="display:block; margin-bottom:6px; font-size:14px; color:#333;">Product URL</label>
+            <input type="text" name="product_url" placeholder="https://www.amazon.in/... or https://www.flipkart.com/..."
+                   style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display:block; margin-bottom:6px; font-size:14px; color:#333;">Check price every</label>
+            <select name="frequency" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+                <option value="15min">Every 15 minutes</option>
+                <option value="hourly" selected>Hourly</option>
+                <option value="daily">Daily</option>
+            </select>
+        </div>
+
+        <button type="submit">Start Tracking</button>
+    </form>
+</div>
+{% endblock %}

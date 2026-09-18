@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Tracked Products ({{ products|length }})</h1>
+
+    {% if not products %}
+        <p style="color:#666;">Abhi koi product track nahi ho raha. <a href="{{ url_for('home') }}">Add karo</a>.</p>
+    {% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Platform</th>
+                <th>Current Price</th>
+                <th>Lowest Seen</th>
+                <th>Frequency</th>
+                <th>Last Checked</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.title or p.url[:50] }}</a></td>
+                <td>{{ p.platform|upper }}</td>
+                <td>{% if p.current_price %}₹{{ "%.2f"|format(p.current_price) }}{% else %}Pending...{% endif %}</td>
+                <td>{% if p.lowest_price %}₹{{ "%.2f"|format(p.lowest_price) }}{% else %}—{% endif %}</td>
+                <td>{{ p.frequency_label }}</td>
+                <td>{% if p.last_checked %}{{ p.last_checked.strftime("%d %b, %I:%M %p") }}{% else %}Not yet{% endif %}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_product', product_id=p.id) }}" style="margin:0;">
+                        <button type="submit" class="danger" onclick="return confirm('Stop tracking this product?')">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

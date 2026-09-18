@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Notifications</h1>
+    {% if not notifications %}
+        <p style="color:#666;">Koi notification abhi nahi hai. Jaise hi kisi product ka price drop/increase hoga, yahan dikhega.</p>
+    {% else %}
+    <table>
+        <thead><tr><th>Message</th><th>When</th></tr></thead>
+        <tbody>
+            {% for n in notifications %}
+            <tr>
+                <td class="{% if n.kind == 'drop' %}price-drop{% elif n.kind == 'increase' %}price-up{% endif %}">
+                    {{ n.message }}
+                </td>
+                <td>{{ n.created_at.strftime("%d %b, %I:%M %p") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

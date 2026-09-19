@@ -1,24 +1,40 @@
+<!-- notifications.html -->
 {% extends "base.html" %}
-{% block title %}Notifications{% endblock %}
+{% block title %}Notifications · Price Tracker{% endblock %}
+
 {% block content %}
 <div class="card">
     <h1>Notifications</h1>
+    <p class="subtitle">Price drops and increases across all your tracked products.</p>
+
     {% if not notifications %}
-        <p style="color:#666;">Koi notification abhi nahi hai. Jaise hi kisi product ka price drop/increase hoga, yahan dikhega.</p>
+        <div class="empty">
+            <span class="icon">🔔</span>
+            Koi notification abhi nahi hai. Jaise hi kisi product ka price drop ya increase hoga, yahan dikhega.
+        </div>
     {% else %}
-    <table>
-        <thead><tr><th>Message</th><th>When</th></tr></thead>
-        <tbody>
-            {% for n in notifications %}
-            <tr>
-                <td class="{% if n.kind == 'drop' %}price-drop{% elif n.kind == 'increase' %}price-up{% endif %}">
-                    {{ n.message }}
-                </td>
-                <td>{{ n.created_at.strftime("%d %b, %I:%M %p") }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Message</th>
+                    <th style="white-space:nowrap;">When</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in notifications %}
+                <tr>
+                    <td class="{% if n.kind == 'drop' %}price-drop{% elif n.kind == 'increase' %}price-up{% endif %}">
+                        {{ n.message }}
+                    </td>
+                    <td style="white-space:nowrap; color:var(--muted); font-size:13px;">
+                        {{ n.created_at.strftime("%d %b, %I:%M %p") }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

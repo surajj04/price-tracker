@@ -1,14 +1,231 @@
+<!-- product_detail.html -->
 {% extends "base.html" %}
-{% block title %}{{ product.title or "Product" }}{% endblock %}
+{% block title %}{{ product.title or "Product" }} · Price Tracker{% endblock %}
+
 {% block content %}
+<style>
+    /* ---------- Header chips ---------- */
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: .03em;
+        background: var(--surface-2);
+        color: #475569;
+        border: 1px solid var(--border);
+        white-space: nowrap;
+    }
+    .chip.platform { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .chip.freq::before {
+        content: "";
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34,197,94,.18);
+    }
+
+    /* ---------- Link bar with actions ---------- */
+    .link-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 16px 0 22px;
+        padding: 8px 8px 8px 14px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+    .link-bar .link-icon {
+        font-size: 14px;
+        opacity: .7;
+        flex-shrink: 0;
+    }
+    .link-bar .link-url {
+        flex: 1 1 220px;
+        min-width: 0;
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: color .15s ease;
+    }
+    .link-bar .link-url:hover { color: var(--primary); }
+
+    .link-bar .link-actions {
+        display: inline-flex;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .link-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 13px;
+        font-size: 12.5px;
+        font-weight: 600;
+        font-family: inherit;
+        line-height: 1;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #334155;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: none;
+        transition: background .15s ease, color .15s ease,
+                    border-color .15s ease, transform .1s ease;
+    }
+    .link-btn:hover {
+        background: #fff;
+        color: var(--primary);
+        border-color: #c7d2fe;
+        opacity: 1;
+    }
+    .link-btn:active { transform: scale(.96); }
+
+    .link-btn.primary {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+    .link-btn.primary:hover {
+        background: var(--primary-dk);
+        border-color: var(--primary-dk);
+        color: #fff;
+    }
+
+    /* ---------- Stats grid ---------- */
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        margin-top: 4px;
+    }
+    .stat {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .stat-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+        line-height: 1.15;
+        color: var(--text);
+    }
+
+    /* ---------- Copy toast ---------- */
+    .copy-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 32px;
+        transform: translate(-50%, 20px);
+        background: #0f172a;
+        color: #fff;
+        padding: 11px 18px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 12px 28px -10px rgba(15,23,42,.55);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease, transform .22s ease;
+        z-index: 100;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .copy-toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+</style>
+
 <div class="card">
-    <h1>{{ product.title or "Product" }}</h1>
-    <p><a href="{{ product.url }}" target="_blank">{{ product.url }}</a></p>
-    <p>Platform: <strong>{{ product.platform|upper }}</strong> | Frequency: <strong>{{ product.frequency_label }}</strong></p>
-    <p>Current Price: <strong>{% if product.current_price %}₹{{ "%.2f"|format(product.current_price) }}{% else %}Pending{% endif %}</strong></p>
-    <p>Lowest Seen: <strong>{% if product.lowest_price %}₹{{ "%.2f"|format(product.lowest_price) }}{% else %}—{% endif %}</strong></p>
-    {% if product.rating %}<p>Rating: <strong>{{ product.rating }}</strong> ({{ product.reviews }})</p>{% endif %}
-    {% if product.category %}<p>Category: <strong>{{ product.category }}</strong></p>{% endif %}
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+        <h1 style="margin-bottom:0;">{{ product.title or "Product" }}</h1>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="chip platform">{{ product.platform|upper }}</span>
+            <span class="chip freq">{{ product.frequency_label }}</span>
+        </div>
+    </div>
+
+    <!-- ============ LINK BAR ============ -->
+    <div class="link-bar">
+        <span class="link-icon">🔗</span>
+        <a class="link-url"
+           href="{{ product.url }}"
+           target="_blank"
+           rel="noopener"
+           title="{{ product.url }}">
+            {{ product.url }}
+        </a>
+        <div class="link-actions">
+            <button type="button"
+                    class="link-btn"
+                    id="copyBtn"
+                    data-url="{{ product.url }}"
+                    title="Copy link">
+                📋 Copy
+            </button>
+            <a class="link-btn primary"
+               href="{{ product.url }}"
+               target="_blank"
+               rel="noopener"
+               title="Open product page">
+                ↗ Visit
+            </a>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <span class="stat-label">Current Price</span>
+            <span class="stat-value">
+                {% if product.current_price %}₹{{ "%.2f"|format(product.current_price) }}{% else %}Pending{% endif %}
+            </span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Lowest Seen</span>
+            <span class="stat-value" style="color:var(--success);">
+                {% if product.lowest_price %}₹{{ "%.2f"|format(product.lowest_price) }}{% else %}—{% endif %}
+            </span>
+        </div>
+        {% if product.rating %}
+        <div class="stat">
+            <span class="stat-label">Rating</span>
+            <span class="stat-value">
+                {{ product.rating }}
+                <span style="font-size:12px; color:var(--muted); font-weight:500;">({{ product.reviews }})</span>
+            </span>
+        </div>
+        {% endif %}
+        {% if product.category %}
+        <div class="stat">
+            <span class="stat-label">Category</span>
+            <span class="stat-value" style="font-size:15px;">{{ product.category }}</span>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 {% set details = product.details %}
@@ -18,11 +235,11 @@
     {% if details is mapping %}
         <table>
             {% for key, value in details.items() %}
-            <tr><td style="width:40%; color:#555;">{{ key }}</td><td>{{ value }}</td></tr>
+            <tr><td class="k">{{ key }}</td><td>{{ value }}</td></tr>
             {% endfor %}
         </table>
     {% else %}
-        <ul>
+        <ul style="margin:0; padding-left:20px;">
             {% for item in details %}
             <li>{{ item }}</li>
             {% endfor %}
@@ -35,32 +252,94 @@
 {% if specs %}
 <div class="card">
     <h2>Specifications</h2>
-    <table>
-        {% for key, value in specs.items() %}
-        <tr><td style="width:40%; color:#555;">{{ key }}</td><td>{{ value }}</td></tr>
-        {% endfor %}
-    </table>
+    <div class="table-wrap">
+        <table>
+            {% for key, value in specs.items() %}
+            <tr><td class="k">{{ key }}</td><td>{{ value }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
 </div>
 {% endif %}
 
 <div class="card">
     <h2>Price History</h2>
     {% if not product.history %}
-        <p style="color:#666;">Abhi tak koi history nahi hai.</p>
+        <div class="empty">
+            <span class="icon">📭</span>
+            Abhi tak koi price history nahi hai.
+        </div>
     {% else %}
-    <table>
-        <thead><tr><th>Checked At</th><th>Price</th></tr></thead>
-        <tbody>
-            {% for h in product.history %}
-            <tr>
-                <td>{{ h.checked_at.strftime("%d %b %Y, %I:%M %p") }}</td>
-                <td>₹{{ "%.2f"|format(h.price) }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Checked At</th><th>Price</th></tr></thead>
+            <tbody>
+                {% for h in product.history %}
+                <tr>
+                    <td>{{ h.checked_at.strftime("%d %b %Y, %I:%M %p") }}</td>
+                    <td style="font-weight:600;">₹{{ "%.2f"|format(h.price) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 </div>
 
-<a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
+<div class="btn-row">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">← Back to Dashboard</a>
+</div>
+
+<!-- ============ Copy toast ============ -->
+<div class="copy-toast" id="copyToast">✅ Link copied to clipboard</div>
+
+<script>
+    (function () {
+        const btn   = document.getElementById('copyBtn');
+        const toast = document.getElementById('copyToast');
+        if (!btn) return;
+
+        let toastTimer;
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+        }
+
+        async function copyText(text) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+                // Fallback for non-secure contexts
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        btn.addEventListener('click', async () => {
+            const url = btn.dataset.url || '';
+            const ok  = await copyText(url);
+            showToast(ok ? '✅ Link copied to clipboard' : '⚠️ Copy failed — please copy manually');
+
+            if (ok) {
+                const original = btn.innerHTML;
+                btn.innerHTML = '✔ Copied';
+                setTimeout(() => (btn.innerHTML = original), 1400);
+            }
+        });
+    })();
+</script>
 {% endblock %}

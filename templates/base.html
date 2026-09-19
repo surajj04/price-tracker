@@ -1,88 +1,340 @@
+<!-- base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Price Tracker{% endblock %}</title>
     <style>
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        :root {
+            --bg:          #eef2f7;
+            --surface:     #ffffff;
+            --surface-2:   #f8fafc;
+            --text:        #0f172a;
+            --muted:       #64748b;
+            --border:      #e2e8f0;
+
+            --primary:     #2563eb;
+            --primary-dk:  #1d4ed8;
+
+            --success:     #15803d;
+            --success-bg:  #dcfce7;
+            --success-br:  #bbf7d0;
+
+            --danger:      #b91c1c;
+            --danger-bg:   #fee2e2;
+            --danger-br:   #fecaca;
+
+            --nav-bg:      #0f172a;
+            --radius:      14px;
+            --shadow:      0 1px 2px rgba(15,23,42,.05), 0 14px 30px -20px rgba(15,23,42,.40);
+        }
+
+        html { -webkit-text-size-adjust: 100%; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
             margin: 0;
-            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 15px;
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
         }
+
+        a { color: var(--primary); }
+
+        /* ============ NAVBAR ============ */
         nav {
-            background: #1e293b;
-            padding: 14px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(15, 23, 42, .97);
+            backdrop-filter: saturate(180%) blur(10px);
+            -webkit-backdrop-filter: saturate(180%) blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,.08);
         }
-        nav a {
+        .nav-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .nav-group { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
             color: #fff;
             text-decoration: none;
-            margin-right: 20px;
+            font-weight: 700;
+            font-size: 15.5px;
+            letter-spacing: -.01em;
+            margin-right: 12px;
+        }
+        .brand .logo {
+            width: 30px; height: 30px;
+            display: grid; place-items: center;
+            border-radius: 9px;
             font-size: 15px;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            box-shadow: 0 6px 14px -6px rgba(59,130,246,.95);
         }
-        nav a:hover { color: #90cdf4; }
+
+        nav a.nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 9px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background .18s ease, color .18s ease;
+        }
+        nav a.nav-link:hover { background: rgba(255,255,255,.09); color: #fff; }
+        nav a.nav-link.active { background: rgba(255,255,255,.15); color: #fff; }
+
         .badge {
-            background: #e53e3e;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 7px;
-            font-size: 12px;
-            margin-left: 4px;
+            display: inline-block;
+            background: #ef4444;
+            color: #fff;
+            border-radius: 999px;
+            padding: 1px 7px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.7;
+            min-width: 19px;
+            text-align: center;
         }
+
+        /* ============ LAYOUT ============ */
         .container {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 20px 72px;
         }
-        .card {
-            background: #fff;
-            padding: 25px 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
+
+        /* ============ FLASH MESSAGES ============ */
         .flash {
-            padding: 10px 14px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            font-size: 14px;
+            font-weight: 500;
+            animation: flashIn .28s ease;
         }
-        .flash.success { background: #d4edda; color: #155724; }
-        .flash.error { background: #f8d7da; color: #721c24; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { color: #555; font-weight: 600; }
-        .price-drop { color: #2f855a; font-weight: bold; }
-        .price-up { color: #c53030; font-weight: bold; }
+        @keyframes flashIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: none; }
+        }
+        .flash.success { background: var(--success-bg); color: var(--success); border-color: var(--success-br); }
+        .flash.error   { background: var(--danger-bg);  color: var(--danger);  border-color: var(--danger-br); }
+        .flash.info    { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+
+        /* ============ CARDS ============ */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px 28px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 25px;
+            line-height: 1.25;
+            letter-spacing: -.022em;
+            font-weight: 700;
+        }
+        h2 {
+            margin: 0 0 16px;
+            font-size: 17px;
+            letter-spacing: -.012em;
+            font-weight: 700;
+        }
+        .subtitle { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+
+        /* ============ TABLES ============ */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 0 -6px;
+            padding: 0 6px;
+            -webkit-overflow-scrolling: touch;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            white-space: nowrap;
+        }
+        tbody tr { transition: background .15s ease; }
+        tbody tr:hover { background: var(--surface-2); }
+        tbody tr:last-child td { border-bottom: none; }
+        td.k { width: 42%; color: var(--muted); }
+
+        /* ============ PRICE STATES ============ */
+        .price-drop { color: var(--success); font-weight: 700; }
+        .price-up   { color: var(--danger);  font-weight: 700; }
+
+        /* ============ BUTTONS ============ */
         button, .btn {
-            background: #2b6cb0;
-            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 20px;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none;
             cursor: pointer;
+            box-shadow: 0 1px 2px rgba(15,23,42,.10);
+            transition: background .18s ease, transform .12s ease, box-shadow .18s ease;
+        }
+        button:hover, .btn:hover {
+            background: var(--primary-dk);
+            box-shadow: 0 6px 16px -8px rgba(37,99,235,.9);
+        }
+        button:active, .btn:active { transform: translateY(1px); }
+
+        button.danger, .btn.danger { background: var(--danger); }
+        button.danger:hover, .btn.danger:hover { background: #991b1b; }
+
+        .btn-ghost {
+            background: #fff;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+        .btn-ghost:hover { background: var(--surface-2); box-shadow: none; }
+
+        .btn-sm { padding: 8px 14px; font-size: 13px; }
+        .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+
+        /* ============ FORMS ============ */
+        .field { margin-bottom: 18px; }
+        .field label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .field .hint { display: block; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+
+        input[type="text"],
+        input[type="url"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37,99,235,.14);
+        }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 38px;
+        }
+
+        /* ============ EMPTY STATE ============ */
+        .empty {
+            text-align: center;
+            padding: 40px 16px;
+            color: var(--muted);
             font-size: 14px;
         }
-        button.danger { background: #c53030; }
-        button:hover { opacity: 0.9; }
+        .empty .icon {
+            display: block;
+            font-size: 34px;
+            line-height: 1;
+            margin-bottom: 12px;
+            opacity: .75;
+        }
+
+        /* ============ FOOTER ============ */
+        .footer {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+            text-align: center;
+            font-size: 12.5px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 560px) {
+            .card { padding: 20px 18px; border-radius: 12px; }
+            h1 { font-size: 21px; }
+            .container { padding: 22px 14px 56px; }
+            .nav-inner { padding: 10px 14px; }
+            nav a.nav-link { padding: 6px 9px; font-size: 13px; }
+        }
     </style>
 </head>
 <body>
+    {% set ep = request.endpoint %}
     <nav>
-        <div>
-            <a href="{{ url_for('home') }}">🔍 Price Tracker</a>
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        </div>
-        <div>
-            <a href="{{ url_for('notifications') }}">
-                🔔 Notifications
-                {% if unread_count and unread_count > 0 %}
-                    <span class="badge">{{ unread_count }}</span>
-                {% endif %}
-            </a>
+        <div class="nav-inner">
+            <div class="nav-group">
+                <a class="brand" href="{{ url_for('home') }}">
+                    <span class="logo">🔍</span> Price Tracker
+                </a>
+                <a class="nav-link {% if ep in ['home', 'track'] %}active{% endif %}"
+                   href="{{ url_for('home') }}">Track</a>
+                <a class="nav-link {% if ep == 'dashboard' %}active{% endif %}"
+                   href="{{ url_for('dashboard') }}">Dashboard</a>
+            </div>
+            <div class="nav-group">
+                <a class="nav-link {% if ep == 'notifications' %}active{% endif %}"
+                   href="{{ url_for('notifications') }}">
+                    🔔 Notifications
+                    {% if unread_count and unread_count > 0 %}
+                        <span class="badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -90,12 +342,17 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
+                    <div class="flash {{ category }}">
+                        <span>{% if category == 'success' %}✅{% elif category == 'error' %}⚠️{% else %}ℹ️{% endif %}</span>
+                        <span>{{ message }}</span>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
     </div>
+
+    <div class="footer">Price Tracker · Prices update automatically on your chosen schedule.</div>
 </body>
 </html>

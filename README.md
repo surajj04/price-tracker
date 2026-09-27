@@ -279,18 +279,10 @@ git push origin feature/amazing-feature
 # Open PR on GitHub
 ```
 
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**.
-
----
-
 ## 👤 Author
 
 **Suraj Jadhav**
-- GitHub: [@your-username](https://github.com/your-username)
+- GitHub: [@surajj04](https://github.com/surajj04/)
 
 ---
 

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 /* ---------------- Fetch all products by user_id ---------------- */
 export const getProductByUserID = async (userId) => {
@@ -51,10 +51,63 @@ export const addProductToTrack = async (payload) => {
   }
 };
 
+export const updateProduct = async (id, payload) => {
+
+  const res = await fetch(
+    `${API_BASE_URL}/product/update-product/${id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.json();
+    console.error("FastAPI validation error:", error.detail);
+    throw new Error(`Update failed: ${res.status}`);
+  }
+
+  return res.json();
+};
+
+export const deleteProduct = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/product/delete-product/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+  return true;
+};
+
+
+export const getLatestNotifications = async (user_id) => {
+  const res = await axios.get(`${API_BASE_URL}/notification/latest/`, {
+    params: {user_id },
+  });
+  return res.data;
+};
+
+export const getNotifications = async (user_id) => {
+  const res = await axios.get(`${API_BASE_URL}/notification/`, {
+    params: {user_id },
+  });
+  return res.data;
+};
+
+export const markNotificationRead = async (id) => {
+  const res = await axios.patch(`${API_BASE_URL}/notification/${id}/read`);
+  return res.data;
+};
+
+export const markAllNotificationsRead = async (user_id) => {
+  const res = await axios.patch(`${API_BASE_URL}/notification/read-all/${user_id}`);
+  return res.data;
+};
+
 /* ---------------- Normalize raw API product ---------------- */
 export const normalizeProduct = (raw) => {
-  const currentPrice = raw.product_price;
-  const mrp = raw.discount_price;
+  const p1 = Number(raw.product_price) || 0;
+  const p2 = Number(raw.discount_price) || 0;
+  const currentPrice = Math.min(p1, p2) || p1 || p2 || 0;
+  const mrp = Math.max(p1, p2) || currentPrice;
 
   const discount =
     mrp && currentPrice ? Math.round(((mrp - currentPrice) / mrp) * 100) : 0;
@@ -65,21 +118,21 @@ export const normalizeProduct = (raw) => {
     brand_or_manufacturer: raw.brand_or_manufacturer,
     category: raw.category,
     platform: raw.platform,
+    image: raw.product_image_link ?? null,
 
     current_price: currentPrice,
     mrp: mrp,
-    target_price: raw.target_price ?? null,
+    target_price: raw.target_price ?? raw.target_price ?? null,
     lowest_price: raw.lowest_price ?? null,
     highest_price: raw.highest_price ?? null,
     discount_pct: discount,
 
     rating: raw.rating,
     reviews: raw.reviews,
-    image: raw.image ?? null,
     created_at: raw.created_at,
 
     last_checked: raw.last_checked ?? null,
-    schedule: raw.schedule ?? null,
+    schedule: raw.check_frequency ?? raw.schedule ?? null,
     status: raw.status ?? "watching",
 
     _raw: raw,

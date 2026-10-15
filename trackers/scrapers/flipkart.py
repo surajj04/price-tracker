@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import logging
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from urllib.parse import urlparse
+import time
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -63,9 +64,6 @@ def extract_sepcs(page, path):
         value = safe_text(spec.locator("xpath= ./div//div[2]"))
         product_spec.update({key:value})
 
-    category = safe_text(page.locator("xpath= //div[normalize-space()='Generic Name']/following-sibling::div[1]"))
-    product_spec.update({'category': category})
-    
     return product_spec
 
 def extract_highlights(page,path, elec=False):
@@ -77,11 +75,27 @@ def extract_highlights(page,path, elec=False):
         item = highlights.nth(i)
         if elec:
             if n != 1 and n!= 0:
-                product_details.append(safe_text(item))
+                if safe_text(item) is not "":
+                    product_details.append(safe_text(item))
             n+=1
         else:
             product_details.append(safe_text(item))
     return product_details
+
+def extract_manufacturer_info(page,path):
+    product_spec = {}
+    elements = page.locator(f"xpath= {path}")
+    for i in range(elements.count()):
+        spec = elements.nth(i)
+        key = safe_text(spec.locator("xpath= ./div/div[1]"))
+        value = safe_text(spec.locator("xpath= ./div/div[2]"))
+        product_spec.update({key:value})
+
+    category = safe_text(page.locator("xpath= //div[normalize-space()='Generic Name']/following-sibling::div[1]"))
+    product_spec.update({'category': category})
+    
+    return product_spec
+
 
 def scrape_flipkart_product(page, target_url: str) -> dict:
     try:
@@ -94,7 +108,7 @@ def scrape_flipkart_product(page, target_url: str) -> dict:
         # Default values
         title = "Not Found"
         discount_price = "Not Found"
-        rating = "Not Found"
+        rating = 0
         reviews = "Not Found"
         product_details = []
         product_link = link
@@ -102,11 +116,17 @@ def scrape_flipkart_product(page, target_url: str) -> dict:
 
         title = safe_text(page.locator("xpath= //div/h1"))
 
-        price = page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/div/div/div/div/div/a[1]/div/div[3]/div")
-        if price.count() > 0:
-            product_price = safe_text(price)
+        image_url = page.locator("picture > img").first
+        product_image = image_url.get_attribute("src")
 
-            discount_price = safe_text(page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/div/div/div/div/div/a[1]/div/div[2]/div"))
+        # price = page.locator("xpath= //div[2]/div/div[2]/div/div/div/div[1]/div/div[2]/div/div[6]/div/div/div/div/div/div/div/a/div/div/div | //div[2]/div/div/div/div/div/div/div/div/div/div/div/div/div/a[1]/div/div[3]/div")
+
+        price = page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/div/div/div/div/div/a[1]/div/div[3]/div")
+
+        if price.count() > 0:
+            discount_price = safe_text(price)
+
+            product_price = safe_text(page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/div/div/div/div/div/a[1]/div/div[2]/div"))
 
             rating = safe_text(page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/a/div/div/div/div/div[1]"))
 
@@ -116,17 +136,53 @@ def scrape_flipkart_product(page, target_url: str) -> dict:
 
             product_specs = {}
             page.locator("xpath= //div[normalize-space()='Specifications']").first.click()
+            time.sleep(2)
             specs = page.locator("xpath= //div/div[2]/div/div/div[2]/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div")
             if specs.count() > 0:
                 product_specs.update(extract_sepcs(page,"//div/div[2]/div/div/div[2]/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
+                page.locator("xpath= //div[normalize-space()='Manufacturer info']").first.click()
+                time.sleep(2)
+                product_specs.update(extract_manufacturer_info(page,"//div/div[2]/div/div/div[2]/div[5]/div/div/div/div/div/div"))
+
             else:
                 product_specs.update(extract_sepcs(page, "//div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
+                page.locator("xpath= //div[normalize-space()='Manufacturer info']").first.click()
+                time.sleep(2)
+                product_specs.update(extract_manufacturer_info(page,"//div/div[2]/div/div/div[2]/div[5]/div/div/div/div/div/div"))
 
+        elif page.locator("xpath=(//div[2]/div/div[2]/div/div/div/div[1]/div/div[2]/div/div[6]/div/div/div/div/div/div/div/a/div/div/div)[last()]").count() > 0:
+            discount_price = safe_text(page.locator("xpath= (//div[2]/div/div[2]/div/div/div/div[1]/div/div[2]/div/div[6]/div/div/div/div/div/div/div/a/div/div/div)[last()]"))
+            
+            product_price = safe_text(page.locator("xpath= (//div[2]/div/div[2]/div/div/div/div[1]/div/div[2]/div/div[6]/div/div/div/div/div/div/div/a/div/div/div)[2]"))
+
+            rating = safe_text(page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/a/div/div/div/div/div[1]"))
+
+            reviews = safe_text(page.locator("xpath= //div[2]/div/div/div/div/div/div/div/div/a/div/div/div/div/div[2]")).replace('| ','')
+
+            product_details = extract_highlights(page,"xpath= //div/div/div/div/div/div/div/div/div/div[13]/div/div/div/div/div/div/div/div/div/div/div/div/div", True)
+
+            product_specs = {}
+            page.locator("xpath= //div[normalize-space()='All details']").first.click()
+            time.sleep(2)
+            page.locator("xpath= //div[normalize-space()='Specifications']").first.click()
+            time.sleep(2)
+
+            specs = page.locator("xpath= //div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div")
+            if specs.count() > 0:
+                product_specs.update(extract_sepcs(page,"//div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
+                page.locator("xpath= //div[normalize-space()='Manufacturer info']").first.click()
+                time.sleep(2)
+                product_specs.update(extract_manufacturer_info(page,"//div/div[2]/div/div/div[2]/div/div/div/div/div/div"))
+            else:
+                product_specs.update(extract_sepcs(page, "//div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
+                page.locator("xpath= //div[normalize-space()='Manufacturer info']").first.click()
+                time.sleep(2)
+                product_specs.update(extract_manufacturer_info(page,"//div/div[2]/div/div/div[2]/div/div/div/div/div/div"))
 
         else:
-            product_price = safe_text(page.locator("xpath= //div[1]/div/div[2]/div/div/div/div/div/div/div/div/div/a/div/div[3]/div"))
+            discount_price = safe_text(page.locator("xpath= //div[1]/div/div[2]/div/div/div/div/div/div/div/div/div/a/div/div[3]/div"))
             
-            discount_price = safe_text(page.locator("xpath= //div[1]/div/div[2]/div/div/div/div/div/div/div/div/div/a/div/div[2]/div"))
+            product_price = safe_text(page.locator("xpath= //div[1]/div/div[2]/div/div/div/div/div/div/div/div/div/a/div/div[2]/div"))
 
             rating = safe_text(page.locator("xpath= //div/div[1]/div/div[2]/div/div/div/div/div/div/div/div/a/div/div/div/div/div[1]"))
 
@@ -140,7 +196,7 @@ def scrape_flipkart_product(page, target_url: str) -> dict:
             specs = page.locator("xpath= //div/div[2]/div/div/div[2]/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div")
 
             if specs.count() > 0:
-                product_specs.update(extract_sepcs(page,"//div/div[2]/div/div/div[2]/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
+                product_specs.update(extract_sepcs(page,"//div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
             else:
                 product_specs.update(extract_sepcs(page, "//div/div[2]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/div/div/div/div/div[2]/div"))
 
@@ -148,6 +204,7 @@ def scrape_flipkart_product(page, target_url: str) -> dict:
         return {
             "product_id": product_id,
             "product_title": title,
+            "product_image": product_image,
             "product_price": product_price,
             "discount_price": discount_price,
             "product_rating": rating,

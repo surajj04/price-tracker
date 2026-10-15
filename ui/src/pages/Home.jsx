@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Icon } from "@iconify/react";
+
 
 const SUPPORTED_STORES = [
-  { name: "Amazon", color: "from-orange-400 to-yellow-500" },
-  { name: "Flipkart", color: "from-blue-500 to-yellow-400" },
-  { name: "Myntra", color: "from-pink-500 to-purple-500" },
-  { name: "Ajio", color: "from-indigo-500 to-purple-600" },
+  { name: "Amazon",   icon: "simple-icons:amazon",   color: "from-orange-400 to-yellow-500" },
+  { name: "Flipkart", icon: "simple-icons:flipkart", color: "from-blue-500 to-yellow-400" },
+  { name: "Myntra",   icon: "simple-icons:myntra",   color: "from-pink-500 to-purple-500" },
+  { name: "Ajio",     icon: "simple-icons:ajio",     color: "from-indigo-500 to-purple-600" },
 ];
 
 const STEPS = [
@@ -24,6 +26,8 @@ const STEPS = [
     desc: "Choose daily or hourly tracking and get alerted the moment the price drops.",
   },
 ];
+
+
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -60,34 +64,6 @@ export default function Home() {
           moment the price drops. No more refreshing tabs.
         </p>
 
-        {/* URL Input */}
-        <form
-          onSubmit={handleTrack}
-          className="mx-auto mt-10 flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-2 backdrop-blur sm:flex-row"
-        >
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://www.amazon.in/dp/..."
-            className="flex-1 rounded-xl bg-transparent px-4 py-3 text-sm text-white placeholder-gray-500 outline-none"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 px-6 py-3 text-sm font-semibold shadow-lg shadow-purple-500/20 transition hover:opacity-90 disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Scraping…
-              </>
-            ) : (
-              <>Track Price</>
-            )}
-          </button>
-        </form>
 
         {/* Supported stores */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs text-gray-500">

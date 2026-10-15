@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
-import {
-  getProductByUserID,
-  normalizeProduct,
-} from "../services/api";
+import { getProductByUserID, normalizeProduct } from "../services/product_api";
 
 /* ------------------------------ Constants ------------------------------ */
 const CATEGORY_ICONS = {
@@ -12,6 +9,7 @@ const CATEGORY_ICONS = {
   Footwear: "👟",
   Wearables: "⌚",
   Clothing: "👖",
+  Computers: "💻",
   default: "📦",
 };
 
@@ -53,6 +51,31 @@ function StatCard({ label, value, sub, accent }) {
   );
 }
 
+/* --------------------------- Product Image --------------------------- */
+function ProductImage({ src, alt, category }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return (
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white/5 text-xl">
+        {CATEGORY_ICONS[category] || CATEGORY_ICONS.default}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+      <img
+        src={src}
+        alt={alt || "Product"}
+        onError={() => setFailed(true)}
+        loading="lazy"
+        className="h-full w-full object-contain p-1"
+      />
+    </div>
+  );
+}
+
 /* ---------------------------- Product Row ---------------------------- */
 function ProductRow({ product, onClick }) {
   const current = product.current_price;
@@ -73,10 +96,12 @@ function ProductRow({ product, onClick }) {
       onClick={onClick}
       className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/5 px-5 py-4 text-left transition last:border-0 hover:bg-white/[0.03]"
     >
-      {/* Icon */}
-      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/5 text-xl">
-        {CATEGORY_ICONS[product.category] || CATEGORY_ICONS.default}
-      </div>
+      {/* 🖼️ Image (falls back to category emoji) */}
+      <ProductImage
+        src={product.image}
+        alt={product.product_title}
+        category={product.category}
+      />
 
       {/* Info */}
       <div className="min-w-0">
@@ -106,12 +131,10 @@ function ProductRow({ product, onClick }) {
           )}
         </div>
 
-        {/* Lowest / Highest / schedule — agar available ho */}
+        {/* Lowest / Highest / schedule */}
         {(lowest || highest || product.schedule) && (
           <div className="mt-1.5 hidden items-center gap-x-3 text-[10px] text-gray-600 sm:flex">
-            {lowest && (
-              <span>Low ₹{lowest.toLocaleString("en-IN")}</span>
-            )}
+            {lowest && <span>Low ₹{lowest.toLocaleString("en-IN")}</span>}
             {highest && (
               <>
                 <span className="text-gray-700">·</span>
@@ -184,10 +207,9 @@ export default function Dashboard() {
         setLoading(true);
         setError(null);
 
-        // TODO: get real userId from auth context / localStorage
         const userId = localStorage.getItem("userId") || 1;
-
         const data = await getProductByUserID(userId);
+        console.log("📦 DASHBOARD DATA:", data);
 
         if (mounted) {
           const normalized = (data || []).map(normalizeProduct);
@@ -241,27 +263,12 @@ export default function Dashboard() {
 
   return (
     <div className="relative z-10 mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
-      
-
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
 
       {/* ============================= MAIN ============================= */}
       <main className="min-w-0 flex-1">
         {/* Top bar */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white lg:hidden"
-            >
-              ☰
-            </button>
             <div>
               <h1 className="text-lg font-semibold text-white">Dashboard</h1>
               <p className="text-xs text-gray-500">
@@ -334,7 +341,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        {/* ======================= Product list states ======================= */}
+        {/* ======================= Product list ======================= */}
         {loading ? (
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-12 text-center">
             <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
@@ -375,7 +382,7 @@ export default function Dashboard() {
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
             {/* Header row (desktop only) */}
             <div className="hidden grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/5 px-5 py-2.5 text-[10px] font-medium text-gray-500 sm:grid">
-              <span className="w-11" />
+              <span className="w-12" />
               <span>Product</span>
               <span className="text-right">Prices</span>
             </div>

@@ -1,7 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { registerUser, loginUser } from "../services/user_api";
 
 export default function SignIn() {
-  const [mode, setMode] = useState("signin"); // "signin" | "register"
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const [mode, setMode] = useState(null); // "signin" | "register"
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -11,23 +17,29 @@ export default function SignIn() {
     password: "",
     confirm: "",
   });
+  const [submitError, setSubmitError] = useState("");
 
   const isRegister = mode === "register";
 
+  /* ------------------------- Reset ------------------------- */
   const resetForm = (nextMode) => {
     setMode(nextMode);
     setForm({ name: "", email: "", password: "", confirm: "" });
     setErrors({});
     setShowPassword(false);
+    setSubmitError("");
   };
 
+  /* ------------------------- Change ------------------------- */
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: "" });
     }
+    if (submitError) setSubmitError("");
   };
 
+  /* ------------------------- Validate ------------------------- */
   const validate = () => {
     const errs = {};
     if (isRegister && !form.name.trim()) errs.name = "Name is required";
@@ -42,28 +54,148 @@ export default function SignIn() {
     return errs;
   };
 
+  /* -------------------- Parse error helper -------------------- */
+  const parseError = (error, fallback = "Something went wrong.") => {
+    if (
+      error?.code === "ERR_NETWORK" ||
+      error?.message === "Network Error"
+    ) {
+      return "Backend server is not reachable. Please check if it's running.";
+    }
+
+    const detail = error?.response?.data?.detail;
+
+    if (typeof detail === "string") return detail;
+
+    if (Array.isArray(detail)) {
+      return detail
+        .map((e) => {
+          const loc = (e.loc || []).join(".");
+          return loc ? `${loc}: ${e.msg}` : e.msg;
+        })
+        .join(" • ");
+    }
+
+    if (detail && typeof detail === "object") return JSON.stringify(detail);
+
+    if (error?.message) return error.message;
+
+    return fallback;
+  };
+
+  /* ------------------- Extract user from response ------------------- */
+  const extractUser = (response) => {
+    if (!response) return null;
+    if (response.user) return response.user;
+    if (response.data && typeof response.data === "object") return response.data;
+    if (response.id || response.user_id) return response;
+    return null;
+  };
+
+  /* ------------------------- Submit ------------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) return setErrors(errs);
 
     setLoading(true);
-    // TODO: API call
-    // signin  -> POST /api/auth/login
-    // register-> POST /api/auth/register
-    console.log(isRegister ? "Register:" : "Sign in:", form);
-    setTimeout(() => setLoading(false), 1200);
+    setSubmitError("");
+
+    try {
+      if (isRegister) {
+        /* ============ REGISTER ============ */
+        const payload = {
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        };
+
+        console.log("Payload → /user/register/:", payload);
+        const response = await registerUser(payload);
+        console.log("📦 REGISTER RESPONSE:", response);
+
+        const user = extractUser(response);
+        const userId = user?.id ?? user?.user_id;
+
+        if (!userId) {
+          throw new Error(
+            "Login succeeded but user id was missing in response."
+          );
+        }
+
+        const authUser = {
+          id: Number(userId),
+          name: user?.name ?? "",
+          email: user?.email ?? form.email,
+        };
+
+        login({
+          user: authUser,
+          token: response?.access_token ?? null,
+        });
+
+        navigate("/dashboard", { replace: true });
+
+      } else {
+        /* ============ LOGIN ============ */
+        const payload = {
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        };
+
+        console.log("Payload → /user/login/:", payload);
+
+        const response = await loginUser(payload);
+
+        console.log("📦 LOGIN RESPONSE:", response);
+
+        const user = extractUser(response);
+        const userId = user?.id ?? user?.user_id;
+
+        if (!userId) {
+          throw new Error(
+            "Login succeeded but user id was missing in response."
+          );
+        }
+
+        const authUser = {
+          id: Number(userId),
+          name: user?.name ?? "",
+          email: user?.email ?? form.email,
+        };
+
+        login({
+          user: authUser,
+          token: response?.access_token ?? null,
+        });
+
+        navigate("/dashboard", { replace: true });
+      }
+
+    } catch (error) {
+      console.error(isRegister ? "Register failed:" : "Login failed:", error);
+      setSubmitError(
+        parseError(
+          error,
+          isRegister
+            ? "Could not create account. Please try again."
+            : "Invalid email or password."
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
+  /* ------------------------- Input class ------------------------- */
   const inputClass = (field) =>
-    `w-full rounded-xl border bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition focus:bg-white/[0.05] ${
-      errors[field]
-        ? "border-red-500/50 focus:border-red-500"
-        : "border-white/10 focus:border-purple-500/60"
+    `w-full rounded-xl border bg-white/[0.03] px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition focus:bg-white/[0.05] ${errors[field]
+      ? "border-red-500/50 focus:border-red-500"
+      : "border-white/10 focus:border-purple-500/60"
     }`;
 
   return (
-    <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-md flex-col justify-center px-6 py-12">
+    <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-xl flex-col justify-center px-6 py-12">
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-2xl shadow-purple-500/5 backdrop-blur-xl">
         {/* Logo */}
         <div className="mb-8 flex items-center justify-center gap-2">
@@ -80,22 +212,20 @@ export default function SignIn() {
           <button
             type="button"
             onClick={() => resetForm("signin")}
-            className={`rounded-lg py-2 font-medium transition ${
-              !isRegister
-                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`rounded-lg py-2 font-medium transition ${!isRegister
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             Sign in
           </button>
           <button
             type="button"
             onClick={() => resetForm("register")}
-            className={`rounded-lg py-2 font-medium transition ${
-              isRegister
-                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow"
-                : "text-gray-400 hover:text-white"
-            }`}
+            className={`rounded-lg py-2 font-medium transition ${isRegister
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow"
+              : "text-gray-400 hover:text-white"
+              }`}
           >
             Register
           </button>
@@ -256,6 +386,13 @@ export default function SignIn() {
               </>
             )}
           </div>
+
+          {/* Error message */}
+          {submitError && (
+            <div className="mb-4 break-words rounded-lg border border-red-500/20 bg-red-500/[0.05] px-3 py-2.5 text-xs text-red-400">
+              {submitError}
+            </div>
+          )}
 
           {/* Submit */}
           <button

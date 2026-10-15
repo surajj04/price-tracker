@@ -46,6 +46,7 @@ def _convert_amazon(raw: dict):
     return {
         "link":raw.get("product_link"),
         "title": title,
+        "image": raw.get("product_image"),
         "price": price,
         "product_price": product_price,
         "discount_price": discount_price,
@@ -76,6 +77,7 @@ def _convert_flipkart(raw: dict):
     return {
         "link":raw.get("product_link"),
         "title": title,
+        "image": raw.get("product_image"),
         "price": price,
         "product_price": product_price,
         "discount_price": discount_price,

@@ -1,0 +1,15 @@
+notification
+schedule products to track - done
+also stop tracking the after target hit the price - done
+
+
+ek user ahee tylaa ek amazon varr product ahe tee track karych ahee kii product price low zalli kii tee mee purchase karell
+aani tylaa notify zal pahije kiii price drop zalii  now you can purchase.
+
+abhii keliyee cron jobs yaa trackers koo schedule karr loo
+
+Interval - minutes=10
+Cron - Every day at 09:30.
+
+also fix the issue in the flipkart other details - done
+

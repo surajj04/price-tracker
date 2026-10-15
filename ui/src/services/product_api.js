@@ -52,13 +52,21 @@ export const addProductToTrack = async (payload) => {
 };
 
 export const updateProduct = async (id, payload) => {
+  // Convert camelCase keys to snake_case for backend
+  const normalizedPayload = {};
+  for (const [key, value] of Object.entries(payload)) {
+    const snakeKey = key.replace(/[A-Z]/g, (m) => "_" + m.toLowerCase());
+    normalizedPayload[snakeKey] = value;
+  }
+
+  console.log("🔍 Outgoing payload:", normalizedPayload);
 
   const res = await fetch(
     `${API_BASE_URL}/product/update-product/${id}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(normalizedPayload),
     }
   );
 

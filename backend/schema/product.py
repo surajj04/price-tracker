@@ -26,7 +26,7 @@ class ProductResponse(BaseModel):
     created_at: datetime
     email_alert:bool
     platform: str
-    stop_tracking:bool
+    stop_tracking:bool = None
 
 
 class ProductCreate(BaseModel):
@@ -47,7 +47,7 @@ class ProductCreate(BaseModel):
     email_alert:bool
     platform: str
     check_frequency:str
-    stop_tracking:bool
+    stop_tracking:bool = None
 
 
 class ProductUpdate(BaseModel):
@@ -69,7 +69,7 @@ class ProductUpdate(BaseModel):
     push_notifications: Optional[bool] = None
     platform: Optional[str] = None
     check_frequency: Optional[str] = None
-    stop_tracking:bool
+    stop_tracking:bool = None
 
 class HistoryPriceCreate(BaseModel):
     product_id:int

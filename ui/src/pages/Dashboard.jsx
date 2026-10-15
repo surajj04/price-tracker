@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getProductByUserID, normalizeProduct } from "../services/product_api";
 
 /* ------------------------------ Constants ------------------------------ */
@@ -20,13 +20,6 @@ const PLATFORM_COLORS = {
   Ajio: "text-indigo-400 bg-indigo-500/10",
   Meesho: "text-purple-400 bg-purple-500/10",
 };
-
-const SIDEBAR_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: "▦", to: "/dashboard" },
-  { id: "add", label: "Add Product", icon: "＋", to: "/add-product" },
-  { id: "alerts", label: "Alerts", icon: "◔", to: "/alerts" },
-  { id: "settings", label: "Settings", icon: "⚙", to: "/settings" },
-];
 
 /* --------------------------- Time helper --------------------------- */
 const timeAgo = (iso) => {
@@ -54,6 +47,10 @@ function StatCard({ label, value, sub, accent }) {
 /* --------------------------- Product Image --------------------------- */
 function ProductImage({ src, alt, category }) {
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
 
   if (!src || failed) {
     return (
@@ -84,9 +81,12 @@ function ProductRow({ product, onClick }) {
   const lowest = product.lowest_price;
   const highest = product.highest_price;
 
-  const hitTarget = target && current <= target;
-  const isLowest = lowest && current <= lowest;
-  const discount = product.discount_pct;
+  const hasValidCurrent = current != null && current > 0;
+  const hitTarget =
+    target != null && hasValidCurrent && current <= target;
+  const isLowest =
+    lowest != null && hasValidCurrent && current <= lowest;
+  const discount = product.discount_pct || 0;
 
   const storeClass =
     PLATFORM_COLORS[product.platform] || "text-gray-400 bg-white/5";
@@ -96,14 +96,12 @@ function ProductRow({ product, onClick }) {
       onClick={onClick}
       className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/5 px-5 py-4 text-left transition last:border-0 hover:bg-white/[0.03]"
     >
-      {/* 🖼️ Image (falls back to category emoji) */}
       <ProductImage
         src={product.image}
         alt={product.product_title}
         category={product.category}
       />
 
-      {/* Info */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="truncate text-sm font-medium text-white">
@@ -117,13 +115,15 @@ function ProductRow({ product, onClick }) {
         </div>
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
-          <span
-            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${storeClass}`}
-          >
-            {product.platform}
-          </span>
-          {product.rating && <span>⭐ {product.rating}</span>}
-          {product.reviews && <span>{product.reviews} reviews</span>}
+          {product.platform && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${storeClass}`}
+            >
+              {product.platform}
+            </span>
+          )}
+          {product.rating ? <span>⭐ {product.rating}</span> : null}
+          {product.reviews ? <span>{product.reviews} reviews</span> : null}
           {product.last_checked && (
             <span className="hidden sm:inline">
               Checked {timeAgo(product.last_checked)}
@@ -131,7 +131,6 @@ function ProductRow({ product, onClick }) {
           )}
         </div>
 
-        {/* Lowest / Highest / schedule */}
         {(lowest || highest || product.schedule) && (
           <div className="mt-1.5 hidden items-center gap-x-3 text-[10px] text-gray-600 sm:flex">
             {lowest && <span>Low ₹{lowest.toLocaleString("en-IN")}</span>}
@@ -151,7 +150,6 @@ function ProductRow({ product, onClick }) {
         )}
       </div>
 
-      {/* Prices */}
       <div className="flex items-center gap-6">
         {target && (
           <div className="hidden text-right sm:block">
@@ -169,7 +167,9 @@ function ProductRow({ product, onClick }) {
         <div className="text-right">
           <p className="text-[10px] text-gray-500">Current</p>
           <p className="text-sm font-semibold text-white">
-            ₹{current?.toLocaleString("en-IN")}
+            {hasValidCurrent
+              ? `₹${current.toLocaleString("en-IN")}`
+              : "—"}
           </p>
           {discount > 0 && (
             <p className="text-[10px] text-green-400">{discount}% off</p>
@@ -189,6 +189,7 @@ function ProductRow({ product, onClick }) {
 /* ------------------------------ Dashboard ------------------------------ */
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,9 +197,8 @@ export default function Dashboard() {
 
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  /* ---------------------- Fetch products on mount ---------------------- */
+  /* ---------------------- Fetch products ---------------------- */
   useEffect(() => {
     let mounted = true;
 
@@ -217,7 +217,10 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error("Fetch error:", err);
-        if (mounted) setError("Failed to load products. Please try again.");
+        if (mounted) {
+          setError("Failed to load products. Please try again.");
+          setProducts([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -227,13 +230,16 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [location.key]); // ← refetch on every navigation
 
   /* ------------------------------ Stats ------------------------------ */
   const stats = useMemo(() => {
     const total = products.length;
     const hits = products.filter(
-      (p) => p.target_price && p.current_price <= p.target_price
+      (p) =>
+        p.target_price &&
+        p.current_price > 0 &&
+        p.current_price <= p.target_price
     ).length;
     const saved = products.reduce(
       (acc, p) => acc + ((p.mrp || 0) - (p.current_price || 0)),
@@ -241,6 +247,15 @@ export default function Dashboard() {
     );
     return { total, hits, saved };
   }, [products]);
+
+  const atLowCount = useMemo(
+    () =>
+      products.filter(
+        (p) =>
+          p.lowest_price && p.current_price > 0 && p.current_price <= p.lowest_price
+      ).length,
+    [products]
+  );
 
   /* ----------------------------- Filter ----------------------------- */
   const filtered = useMemo(() => {
@@ -254,8 +269,12 @@ export default function Dashboard() {
         filter === "all"
           ? true
           : filter === "hits"
-          ? p.target_price && p.current_price <= p.target_price
-          : !p.target_price || p.current_price > p.target_price;
+          ? p.target_price &&
+            p.current_price > 0 &&
+            p.current_price <= p.target_price
+          : !p.target_price ||
+            p.current_price <= 0 ||
+            p.current_price > p.target_price;
 
       return matchQuery && matchFilter;
     });
@@ -263,8 +282,6 @@ export default function Dashboard() {
 
   return (
     <div className="relative z-10 mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
-
-      {/* ============================= MAIN ============================= */}
       <main className="min-w-0 flex-1">
         {/* Top bar */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -304,11 +321,7 @@ export default function Dashboard() {
           />
           <StatCard
             label="At all-time low"
-            value={
-              products.filter(
-                (p) => p.lowest_price && p.current_price <= p.lowest_price
-              ).length
-            }
+            value={atLowCount}
             accent="text-purple-400"
           />
           <StatCard
@@ -341,7 +354,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        {/* ======================= Product list ======================= */}
+        {/* Product list */}
         {loading ? (
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-12 text-center">
             <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-purple-400" />
@@ -380,7 +393,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-            {/* Header row (desktop only) */}
             <div className="hidden grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-white/5 px-5 py-2.5 text-[10px] font-medium text-gray-500 sm:grid">
               <span className="w-12" />
               <span>Product</span>

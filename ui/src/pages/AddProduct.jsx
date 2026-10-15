@@ -93,7 +93,7 @@ export default function AddProduct() {
     if (!value.trim()) return "Please paste a product link";
     try {
       const u = new URL(value);
-      const allowed = ["amazon.", "flipkart.", "myntra.", "ajio.", "meesho."];
+      const allowed = ["amazon.", "flipkart.", "myntra.", "ajio.", "meesho.","amzn."];
       const ok = allowed.some((d) => u.hostname.includes(d));
       if (!ok)
         return "Only Amazon, Flipkart, Myntra, Ajio & Meesho links are supported";

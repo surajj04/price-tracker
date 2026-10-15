@@ -226,7 +226,7 @@ def run_flipkart_scraper(url):
     browser = None
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False, args=["--start-maximized"])
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
             page = browser.new_page(no_viewport=True)
 
             try:
